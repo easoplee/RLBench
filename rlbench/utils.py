@@ -42,7 +42,8 @@ def get_stored_demos(amount: int, image_paths: bool, dataset_root: str,
                      variation_number: int, task_name: str,
                      obs_config: ObservationConfig,
                      random_selection: bool = True,
-                     from_episode_number: int = 0) -> List[Demo]:
+                     from_episode_number: int = 0,
+                     concat_every_n: int = 10) -> List[Demo]:
 
     task_root = join(dataset_root, task_name)
     if not exists(task_root):
@@ -123,7 +124,11 @@ def get_stored_demos(amount: int, image_paths: bool, dataset_root: str,
                 listdir(wrist_depth_f)) == len(listdir(front_rgb_f)) == len(
                 listdir(front_depth_f))):
             raise RuntimeError('Broken dataset assumption')
-
+        
+        # initialize concatenated point clouds
+        point_cloud_up_until_now = None
+        wrist_rgb_up_until_now = None
+        
         for i in range(num_steps):
             # descriptions
             obs[i].misc['descriptions'] = descriptions
@@ -334,6 +339,18 @@ def get_stored_demos(amount: int, image_paths: bool, dataset_root: str,
                         _resize_if_needed(Image.open(
                             obs[i].front_mask),
                             obs_config.front_camera.image_size)))
+                
+                # add the current wrist point cloud to the last point cloud 
+                if point_cloud_up_until_now is None:
+                    point_cloud_up_until_now =  np.expand_dims(obs[i].wrist_point_cloud, axis=-1)
+                    wrist_rgb_up_until_now = np.expand_dims(obs[i].wrist_rgb, axis=-1)
+                else:
+                    if i % concat_every_n == 0:
+                        point_cloud_up_until_now = np.concatenate((point_cloud_up_until_now, np.expand_dims(obs[i].wrist_point_cloud, axis=-1)), axis=-1)
+                        wrist_rgb_up_until_now = np.concatenate((wrist_rgb_up_until_now, np.expand_dims(obs[i].wrist_rgb, axis=-1)), axis=-1)
+                        
+                obs[i].concatenated_wrists_point_cloud = point_cloud_up_until_now
+                obs[i].concatenated_wrists_rgb = wrist_rgb_up_until_now
 
         demos.append(obs)
     return demos

@@ -268,6 +268,7 @@ class Scene(object):
             wrist_rgb=wrist_rgb,
             wrist_depth=wrist_depth,
             wrist_point_cloud=wrist_pcd,
+            # TODO: initialize concatenated_wrists_point_cloud & rgb
             front_rgb=front_rgb,
             front_depth=front_depth,
             front_point_cloud=front_pcd,
